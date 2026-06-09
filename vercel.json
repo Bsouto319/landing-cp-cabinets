@@ -1,0 +1,7 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
+    { "source": "/schedule", "destination": "https://leads.btechsouto.shop/schedule/cp-cabinets", "permanent": false }
+  ]
+}
