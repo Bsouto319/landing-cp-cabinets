@@ -813,7 +813,19 @@
   (function(){
     var di = document.getElementById('ff-date');
     if (!di) return;
-    di.min = new Date().toISOString().split('T')[0];
+    // Calcula min date pulando feriados e domingo
+    (function() {
+      var d = new Date();
+      var day = d.toISOString().split('T')[0];
+      for (var i = 0; i < 30; i++) {
+        var dow = new Date(day + 'T12:00:00').getDay();
+        if (HOLIDAY_DATES.indexOf(day) === -1 && dow !== 0) break;
+        var next = new Date(day + 'T12:00:00');
+        next.setDate(next.getDate() + 1);
+        day = next.toISOString().split('T')[0];
+      }
+      di.min = day;
+    })();
     di.addEventListener('change', function() {
       var msg = document.getElementById('sundayMsg');
       var hMsg = document.getElementById('holidayMsg');
