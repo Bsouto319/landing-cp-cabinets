@@ -722,6 +722,7 @@
             <input class="f-inp" id="ff-date" name="your-date" type="date">
             <div class="sunday-msg" id="sundayMsg">Showroom is closed on Sundays. Please choose a weekday.</div>
             <div class="sunday-msg" id="mondayMsg" style="display:none;">On Mondays we start at 1:00 PM — morning slots are unavailable.</div>
+            <div class="sunday-msg" id="holidayMsg" style="display:none;">We're closed June 19–22 for the Juneteenth holiday. We'll be back on Tuesday, June 23 — please select a date from June 23 onward.</div>
           </div>
           <div class="f-field">
             <label class="f-label">Preferred Time <span class="f-req">*</span></label>
@@ -743,6 +744,18 @@
               <option>Quartz Countertops</option><option>Full Kitchen Remodel</option>
               <option>Vinyl Flooring</option><option>Marble / Wall Panels</option><option>Other</option>
             </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="f-field">
+            <label class="f-label">Your City <span style="font-weight:400;color:var(--light);font-size:12px;">(optional)</span></label>
+            <input class="f-inp" id="ff-city" name="your-city" placeholder="Columbia, SC" autocomplete="address-level2">
+          </div>
+          <div style="display:none;">
+            <input id="visitorCity" name="visitor-city" value="">
+            <input id="visitorRegion" name="visitor-region" value="">
+            <input id="visitorCountry" name="visitor-country" value="">
+            <input id="visitorIp" name="visitor-ip" value="">
           </div>
         </div>
         <div class="form-row full" style="margin-bottom:20px;">
@@ -778,13 +791,43 @@
   })();
 
   // Min date = hoje, bloqueia domingo; segunda-feira só a partir de 1 PM
+  var HOLIDAY_DATES = ['2026-06-19', '2026-06-20', '2026-06-21', '2026-06-22'];
+
+  // Geo IP — auto-preenche cidade se o usuário não preencheu
+  (function() {
+    try {
+      fetch('https://ipapi.co/json/')
+        .then(function(r){ return r.json(); })
+        .then(function(geo) {
+          var cityEl = document.getElementById('ff-city');
+          if (cityEl && !cityEl.value && geo.city && geo.region) {
+            cityEl.placeholder = geo.city + ', ' + geo.region_code;
+          }
+          if (document.getElementById('visitorCity'))   document.getElementById('visitorCity').value   = geo.city    || '';
+          if (document.getElementById('visitorRegion')) document.getElementById('visitorRegion').value = geo.region  || '';
+          if (document.getElementById('visitorCountry'))document.getElementById('visitorCountry').value= geo.country_name || '';
+          if (document.getElementById('visitorIp'))     document.getElementById('visitorIp').value     = geo.ip      || '';
+        });
+    } catch(_) {}
+  })();
   (function(){
     var di = document.getElementById('ff-date');
     if (!di) return;
     di.min = new Date().toISOString().split('T')[0];
     di.addEventListener('change', function() {
       var msg = document.getElementById('sundayMsg');
+      var hMsg = document.getElementById('holidayMsg');
       if (!this.value) return;
+      // Bloqueia feriado Juneteenth (19-21 Jun 2026)
+      if (HOLIDAY_DATES.indexOf(this.value) !== -1) {
+        this.value = '';
+        hMsg.style.display = 'block';
+        hMsg.textContent = 'We’re closed June 19–22 for the Juneteenth holiday. We’ll be back on Tuesday, June 23 — please select a date from June 23 onward.';
+        msg.style.display = 'none';
+        document.getElementById('mondayMsg').style.display = 'none';
+        return;
+      }
+      hMsg.style.display = 'none';
       var day = new Date(this.value + 'T12:00:00').getDay();
       if (day === 0) { this.value = ''; msg.style.display = 'block'; return; }
       msg.style.display = 'none';
@@ -890,6 +933,10 @@
     }
     if (!valid) return;
 
+    if (dateVal && HOLIDAY_DATES.indexOf(dateVal) !== -1) {
+      document.getElementById('ferror').textContent = 'We\'re closed June 19–22 for the Juneteenth holiday. We\'ll be back on Tuesday, June 23 — please select a date from June 23 onward.';
+      document.getElementById('ferror').style.display = 'block'; return;
+    }
     if (dateVal && new Date(dateVal + 'T12:00:00').getDay() === 0) {
       document.getElementById('ferror').textContent = 'Showroom is closed on Sundays. Please choose a weekday.';
       document.getElementById('ferror').style.display = 'block'; return;
@@ -916,6 +963,14 @@
     if (selectedVisitType === 'inhome' && address) msgParts.push('Customer Address: ' + address);
     if (notes) msgParts.push(notes);
 
+    var cityVal   = document.getElementById('ff-city') ? document.getElementById('ff-city').value.trim() : '';
+    var vCity     = document.getElementById('visitorCity')    ? document.getElementById('visitorCity').value    : '';
+    var vRegion   = document.getElementById('visitorRegion')  ? document.getElementById('visitorRegion').value  : '';
+    var vCountry  = document.getElementById('visitorCountry') ? document.getElementById('visitorCountry').value : '';
+    var vIp       = document.getElementById('visitorIp')      ? document.getElementById('visitorIp').value      : '';
+    var finalCity = cityVal || (vCity && vRegion ? vCity + ', ' + vRegion : vCity);
+    if (finalCity) msgParts.push('City: ' + finalCity);
+
     var params = new URLSearchParams();
     params.append('your-name',    name);
     params.append('your-phone',   phone);
@@ -925,6 +980,11 @@
     params.append('your-project', project);
     params.append('your-message', msgParts.join(' | '));
     if (selectedVisitType === 'inhome' && address) params.append('your-address', address);
+    if (cityVal)  params.append('your-city',        cityVal);
+    if (vCity)    params.append('visitor-city',     vCity);
+    if (vRegion)  params.append('visitor-region',   vRegion);
+    if (vCountry) params.append('visitor-country',  vCountry);
+    if (vIp)      params.append('visitor-ip',       vIp);
 
     try {
       var res = await fetch('https://leads.btechsouto.shop/webhook/cf7?clientId=5221cab9-a741-4ddc-a752-2359826fba95', {
