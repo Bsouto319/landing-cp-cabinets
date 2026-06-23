@@ -671,8 +671,8 @@
     </div>
     <div class="form-card">
       <div class="form-head">
-        <div class="form-head-eyebrow">CP Cabinets &amp; Quartz · Irmo, SC</div>
-        <div class="form-head-title">Schedule Your Showroom Visit</div>
+        <div class="form-head-eyebrow">CP Cabinets &amp; Quartz · Irmo, SC &amp; Charleston, SC</div>
+        <div class="form-head-title">Schedule Your Free Consultation</div>
         <div class="form-head-sub">Free personalized quote · No obligation · Mon–Fri 9 AM – 4 PM</div>
       </div>
       <div class="form-body" id="fbody">
@@ -706,6 +706,21 @@
         </div>
         <div class="form-row full">
           <div class="f-field"><label class="f-label">Email</label><input class="f-inp" id="ff-email" name="your-email" placeholder="john@email.com" type="email" autocomplete="email"></div>
+        </div>
+
+        <div class="form-row full">
+          <div class="f-field">
+            <label class="f-label">Your Area <span class="f-req">*</span></label>
+            <select class="f-sel" id="ff-area" name="your-area" onchange="onAreaChange(this.value)">
+              <option value="">— Select your area —</option>
+              <option value="Irmo / Columbia, SC">Irmo / Columbia, SC (Midlands)</option>
+              <option value="Charleston, SC">Charleston, SC</option>
+              <option value="Other SC area">Other SC area</option>
+            </select>
+          </div>
+        </div>
+        <div id="charleston-hint" style="display:none;background:#f0faf4;border:1px solid #a3d9b5;border-radius:9px;padding:12px 14px;font-size:13px;color:#1a6b40;margin-top:-8px;margin-bottom:16px;">
+          📍 <strong>We have a Local Sales Representative serving Charleston, SC.</strong> They will come to you — no need to drive to Irmo!
         </div>
 
         <!-- In-home: customer address -->
@@ -921,6 +936,10 @@
   }
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
 
+  function onAreaChange(val) {
+    document.getElementById('charleston-hint').style.display = val === 'Charleston, SC' ? 'block' : 'none';
+  }
+
   // Phone mask
   var phoneEl = document.getElementById('ff-phone');
   if (phoneEl) {
@@ -946,6 +965,13 @@
       document.getElementById('ferror').textContent = 'Please select a visit type — In-Home Estimate or Showroom Visit.';
       document.getElementById('ferror').style.display = 'block'; return;
     }
+
+    var area = document.getElementById('ff-area').value;
+    if (!area) {
+      document.getElementById('ff-area').classList.add('err');
+      document.getElementById('ferror').textContent = 'Please select your area.';
+      document.getElementById('ferror').style.display = 'block'; return;
+    } else { document.getElementById('ff-area').classList.remove('err'); }
 
     var valid = true;
     [['ff-name',name],['ff-phone',phone],['ff-date',dateVal],['ff-time',time],['ff-project',project]].forEach(function(p){
@@ -1006,6 +1032,8 @@
     params.append('your-project', project);
     params.append('your-message', msgParts.join(' | '));
     if (selectedVisitType === 'inhome' && address) params.append('your-address', address);
+    var areaVal = document.getElementById('ff-area') ? document.getElementById('ff-area').value : '';
+    if (areaVal) { params.append('your-area', areaVal); msgParts.push('Area: ' + areaVal); }
     if (cityVal)  params.append('your-city',        cityVal);
     if (vCity)    params.append('visitor-city',     vCity);
     if (vRegion)  params.append('visitor-region',   vRegion);
